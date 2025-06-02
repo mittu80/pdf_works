@@ -1,89 +1,86 @@
-# import fitz  # PyMuPDF
 import os
-import pathlib
-
-import fitz
-import pymupdf
-from dotenv import load_dotenv
-import pymupdf4llm
-from langchain.text_splitter import MarkdownTextSplitter
-
+import fitz  # PyMuPDF
+import click
 
 def pdf_extractor(path, num_blocks_to_remove=0):
-    # ask user and verify if the file exists
+    """
+    Extracts text from a PDF file while removing specified blocks
+    (headers and footers) based on their bounding box positions.
+
+    Parameters:
+    - path: str : path to the PDF file
+    - num_blocks_to_remove: int : number of blocks to remove from each page
+    """
+    # Verify if the file exists
     if not os.path.exists(path):
         raise FileNotFoundError(f"The file {path} does not exist.")
 
+    with fitz.Document(path) as doc:  # Using with statement for proper cleanup
+        for page in doc:
+            blocks = page.get_text("dict")["blocks"]
+            for block in blocks[:num_blocks_to_remove]:
+                bbox = block["bbox"]
+                y0, y1 = bbox[1], bbox[3]
+                # Remove header and footer
+                if y0 < 80 or y1 > page.rect.height - 80:
+                    page.add_redact_annot(bbox, fill=(1, 1, 1))
+            page.apply_redactions()
 
-    doc =fitz.open(path)
-    for page in doc:
-        blocks = page.get_text("dict")["blocks"]
-        for block in blocks[:num_blocks_to_remove]:
-            bbox = block["bbox"]
-            y0, y1 = bbox[1], bbox[3]
-            # remove header and footer
-            if y0 < 80 or y1 > page.rect.height - 80:
-                page.add_redact_annot(bbox, fill=(1, 1, 1))
-            # if y1 < 50:
-            #     page.add_redact_annot(bbox, fill=(1, 1, 1))
-            # # remove footer
-            # elif y0 > page.rect.height - 50:
-            #     page.add_redact_annot(bbox, fill=(1, 1, 1))
-        page.apply_redactions()
-
-    doc.save('Files/CTAL_TM_2012_Syllabus_v2.0_redacted.pdf')
-
-
-
-    # Open the PDF file
-    # md_read = pymupdf4llm.LlamaMarkdownReader()
-    # data = md_read.load_data(path)
-    content= []
-    # result 'data' is a list of pages containing meta data
-    # and text content
-    # print the text content of each page
-    # md_text = pymupdf4llm.to_markdown(path)
-    # splitter = MarkdownTextSplitter(chunk_size=1000, chunk_overlap=0)
-    # splitter.create_documents([md_text])
-    # for page in data:
-        # print(type(page))
-        # print(page.metadata['title'])
-        # print(page.metadata['author'])
-        # print(page.metadata['footer'])
-        # # Entferne Header und Footer
-        # print(f'processing page {page.metadata[""]}')
-        # page.text = page.text.replace(page.metadata['header'], '')
-        # page.text = page.text.replace(page.metadata['footer'], '')
-        # print(page.text)
-        # print(f"title is: {page.meta['title']}")
-        # print(f"Number of Pages is: {page.meta['number_of_pages']}")
-        # # PDFWriter erwartet PDF-Seiten, nicht Text!
-        # pdf_writer = PdfWriter()
-        # pdf_writer.add_page(page['text'])
-        # # Save the extracted text to a new PDF file
-        # output_path = os.path.splitext(path)[0] + "_extracted.pdf"
-        # pdf_writer.write(output_path)
-        # print(f"Extracted text saved to {output_path}")
-
+        output_path = os.path.splitext(path)[0] + "_redacted.pdf"
+        doc.save(output_path)
+        click.echo(f"Redacted PDF saved to: {output_path}")
 
 def inspect_pdf_layout(path, page_number=0):
-    # Open the PDF file
-    doc = fitz.open(path)
-    page = doc[page_number]
-    blocks = page.get_text("dict")["blocks"]
+    """
+    Inspects the layout of a specific page in a PDF file.
 
-    for i, block in enumerate(blocks):
-        bbox = block["bbox"]
-        text = "".join([line["spans"][0]["text"] for line in block["lines"] if line["spans"]])
-        print(f"Block {i}: y0={bbox[1]:.2f}, y1={bbox[3]:.2f}, Text: {text[:60]}")
+    Parameters:
+    - path: str : path to the PDF file
+    - page_number: int : page number to inspect
+    """
+    with fitz.Document(path) as doc:
+        page = doc[page_number]
+        blocks = page.get_text("dict")["blocks"]
+
+        for i, block in enumerate(blocks):
+            bbox = block["bbox"]
+            # More robust text extraction
+            try:
+                if "lines" in block:
+                    text = " ".join([
+                        span.get("text", "")
+                        for line in block["lines"]
+                        for span in line.get("spans", [])
+                    ])
+                else:
+                    text = block.get("text", "")
+            except Exception:
+                text = "<unreadable text>"
+
+            click.echo(f"Block {i}: y0={bbox[1]:.2f}, y1={bbox[3]:.2f}, Text: {text[:60]}")
+
+
+@click.command()
+@click.option('--path', prompt='Path to the PDF file', help='The path to the PDF file to be processed.')
+@click.option('--num-blocks', default=0, help='Number of blocks to remove from each page (headers/footers).')
+@click.option('--inspect', is_flag=True, help='Inspect layout of the first page instead of extracting text.')
+def main(path, num_blocks, inspect):
+    """
+    Main entry point for the PDF processing tool.
+
+    This tool allows you to extract text from a PDF file while removing specified blocks,
+    such as headers and footers. You can also inspect the layout of the first page of a PDF.
+
+    Parameters:
+    - path: str : The path to the PDF file to be processed.
+    - num_blocks: int : Number of blocks to remove from each page (headers/footers).
+    - inspect: bool : If set, inspect the layout of the first page instead of extracting text.
+    """
+    if inspect:
+        inspect_pdf_layout(path)
+    else:
+        pdf_extractor(path, num_blocks)
+
 if __name__ == "__main__":
-    # C:\\Users\\a941498\\Downloads\\CTAL_TM_2012_Syllabus_v2.0.pdf
-    # user prompt to enter the path to the PDF file
-    # pdf_file_path = input("Enter the path to the PDF file: ")
-    # if pdf_file_path:
-    #     pdf_extractor(pdf_file_path)
-    # else:
-    #     print("No file path provided. Exiting.")
-    #     exit(1)
-    # inspect_pdf_layout('Files/CTAL_TM_2012_Syllabus_v2.0.pdf')
-    pdf_extractor('Files/CTAL_TM_2012_Syllabus_v2.0.pdf', num_blocks_to_remove=10)
+    main()
+
