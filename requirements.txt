@@ -1,0 +1,4 @@
+elevenlabs
+python-dotenv
+pymupdf4llm
+llama_index
