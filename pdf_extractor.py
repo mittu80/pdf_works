@@ -1,3 +1,4 @@
+# PDF Extractor Tool - Enhanced version with header/footer removal
 import os
 import fitz  # PyMuPDF
 import click
