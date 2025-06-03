@@ -1,8 +1,9 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -20,14 +21,16 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
-.venv/
-venv/
-ENV/
-
-# IDE
+# PyCharm
 .idea/
-.vscode/
+*.iml
 
-# Generated PDFs
-*_redacted.pdf
+# PDF files
+Files/
+*.pdf
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
