@@ -1,42 +1,43 @@
-# PDF Works
+# PDF Header Footer Extractor
 
-A Python tool for processing PDF files, with features including:
-- Text extraction
-- Header and footer removal
-- PDF layout inspection
+A Python tool for automatically detecting and removing headers and footers from PDF documents, with special support for ISTQB documentation format.
 
-## Requirements
+## Features
 
-- Python 3.x
-- PyMuPDF (fitz)
-- click
+- Automatic header and footer detection
+- Smart content preservation (avoids removing non-header content)
+- Support for different document versions (v2.0, v3.0)
+- Batch processing capability
+- Layout inspection tools
 
 ## Installation
 
 ```bash
-# Create and activate virtual environment (optional but recommended)
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-To inspect PDF layout:
 ```bash
-python -m pdf_extractor --path "path/to/your.pdf" --inspect
+# Process a single file
+python pdf_extractor.py --path file.pdf
+
+# Inspect a file's layout
+python pdf_extractor.py --path file.pdf --inspect --page 2
+
+# Process all PDFs in a directory
+python pdf_extractor.py --path ./Files --batch
+
+# Process with custom output directory
+python pdf_extractor.py --path file.pdf --output-dir ./output
 ```
 
-To remove headers/footers:
-```bash
-python -m pdf_extractor --path "path/to/your.pdf" --num-blocks 10
-```
+## Requirements
 
-## Features
+- Python 3.6+
+- PyMuPDF (fitz)
+- click
 
-- PDF Layout Inspection: Analyze the structure of PDF documents
-- Header/Footer Removal: Clean up PDFs by removing unwanted headers and footers
-- Text Block Analysis: View detailed information about text blocks in PDFs
+## License
 
+MIT License
